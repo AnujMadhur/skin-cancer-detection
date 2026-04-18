@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 import json
+import gdown
 import os
 from pathlib import Path
 
@@ -18,12 +19,24 @@ st.set_page_config(
 @st.cache_resource
 def load_model_and_info():
     base = Path(__file__).parent.parent
-    model_path = base / "models" / "best_model.h5"
-    info_path  = base / "models" / "class_info.json"
-    
-    model = tf.keras.models.load_model(str(model_path))
+    model_dir = base / "models"
+    model_path = model_dir / "best_model.h5"
+    info_path = model_dir / "class_info.json"
+
+    # create folder
+    model_dir.mkdir(exist_ok=True)
+
+    # Download model if not present
+    if not model_path.exists():
+        file_id = "1-sUCNhyd9biux1T7HJ5bGDSpYs9kqTK0"
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, str(model_path), quiet=False)
+
+    model = tf.keras.models.load_model(str(model_path), compile=False)
+
     with open(info_path) as f:
         info = json.load(f)
+
     return model, info
 
 model, class_info = load_model_and_info()
