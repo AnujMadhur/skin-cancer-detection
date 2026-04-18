@@ -1,0 +1,26 @@
+{
+  "class_names": [
+    "akiec",
+    "bcc",
+    "bkl",
+    "df",
+    "mel",
+    "nv",
+    "vasc"
+  ],
+  "label_map": {
+    "akiec": "Actinic Keratosis (Pre-cancer)",
+    "bcc": "Basal Cell Carcinoma",
+    "bkl": "Benign Keratosis (Benign)",
+    "df": "Dermatofibroma (Benign)",
+    "mel": "Melanoma \u26a0\ufe0f (Dangerous)",
+    "nv": "Melanocytic Nevi / Mole (Common)",
+    "vasc": "Vascular Lesion (Benign)"
+  },
+  "dangerous_classes": [
+    "mel",
+    "bcc",
+    "akiec"
+  ],
+  "img_size": 224
+}
