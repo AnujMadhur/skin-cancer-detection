@@ -92,7 +92,7 @@ if uploaded is not None:
     col1, col2 = st.columns([1, 1])
     with col1:
         st.subheader("Uploaded Image")
-        st.image(img, use_container_width=True)
+        st.image(img, use_column_width=True)
 
     with col2:
         st.subheader("Prediction")
