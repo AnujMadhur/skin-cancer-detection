@@ -6,41 +6,35 @@ import streamlit as st
 from PIL import Image
 from pathlib import Path
 
-# ── Auto-download model from Google Drive ────────────────────
-# This runs when Render starts the app for the first time
-
-MODEL_DIR  = Path(__file__).parent.parent / "models"
-MODEL_PATH = MODEL_DIR / "best_model.h5"
-INFO_PATH  = MODEL_DIR / "class_info.json"
-
-# ── PASTE YOUR GOOGLE DRIVE FILE ID HERE ─────────────────────
+# ── Paths ─────────────────────────────────────────────────────
+MODEL_DIR       = Path(__file__).parent.parent / "models"
+MODEL_PATH      = MODEL_DIR / "best_model.h5"
+INFO_PATH       = MODEL_DIR / "class_info.json"
 GDRIVE_MODEL_ID = "1-sUCNhyd9biux1T7HJ5bGDSpYs9kqTK0"
-# ─────────────────────────────────────────────────────────────
 
-def download_model_if_needed():
-    if not MODEL_PATH.exists():
-        MODEL_DIR.mkdir(parents=True, exist_ok=True)
-        st.info("Downloading model... this takes ~1 minute on first load.")
-        import gdown
-        gdown.download(
-            f"https://drive.google.com/uc?id={GDRIVE_MODEL_ID}",
-            str(MODEL_PATH),
-            quiet=False
-        )
-
-download_model_if_needed()
-
-# ── Now import tensorflow AFTER download ─────────────────────
-import tensorflow as tf
-
-# ── Page config ───────────────────────────────────────────────
+# ── MUST BE FIRST st command — no exceptions ──────────────────
 st.set_page_config(
     page_title = "Skin Cancer Detector",
     page_icon  = "🔬",
     layout     = "centered"
 )
 
-# ── Load model ────────────────────────────────────────────────
+# ── Download model if not present ─────────────────────────────
+def download_model_if_needed():
+    if not MODEL_PATH.exists():
+        MODEL_DIR.mkdir(parents=True, exist_ok=True)
+        with st.spinner("Downloading model... please wait ~1 minute on first load."):
+            import gdown
+            url = f"https://drive.google.com/uc?id={GDRIVE_MODEL_ID}&export=download&confirm=t"
+            gdown.download(url, str(MODEL_PATH), quiet=False, fuzzy=True)
+        st.success("Model downloaded! Loading now...")
+
+download_model_if_needed()
+
+# ── Load TensorFlow after download ───────────────────────────
+import tensorflow as tf
+
+# ── Load model and class info ─────────────────────────────────
 @st.cache_resource
 def load_model_and_info():
     model = tf.keras.models.load_model(str(MODEL_PATH))
@@ -72,6 +66,7 @@ st.warning(
     "Always consult a qualified dermatologist."
 )
 
+# ── Sidebar ───────────────────────────────────────────────────
 with st.sidebar:
     st.header("About")
     st.markdown("""
@@ -82,9 +77,10 @@ with st.sidebar:
     """)
     st.header("Classes")
     for code, name in LABEL_MAP.items():
-        color = "🔴" if code in DANGEROUS else "🟢"
-        st.markdown(f"{color} **{code.upper()}** — {name}")
+        icon = "🔴" if code in DANGEROUS else "🟢"
+        st.markdown(f"{icon} **{code.upper()}** — {name}")
 
+# ── Upload ────────────────────────────────────────────────────
 uploaded = st.file_uploader(
     "Upload a skin lesion image (JPG, PNG)",
     type=["jpg", "jpeg", "png"]
@@ -101,16 +97,14 @@ if uploaded is not None:
     with col2:
         st.subheader("Prediction")
         with st.spinner("Analysing image..."):
-            input_arr = preprocess(img)
-            preds = model.predict(input_arr)[0]
-
-        top_idx   = int(np.argmax(preds))
-        top_class = CLASS_NAMES[top_idx]
-        top_conf  = float(preds[top_idx]) * 100
+            preds     = model.predict(preprocess(img))[0]
+            top_idx   = int(np.argmax(preds))
+            top_class = CLASS_NAMES[top_idx]
+            top_conf  = float(preds[top_idx]) * 100
 
         if top_class in DANGEROUS:
             st.error(f"⚠️ **{top_class.upper()}** — {LABEL_MAP[top_class]}")
-            st.markdown("**High-risk lesion detected. Please consult a dermatologist.**")
+            st.markdown("**High-risk lesion. Please consult a dermatologist.**")
         else:
             st.success(f"✅ **{top_class.upper()}** — {LABEL_MAP[top_class]}")
 
@@ -121,9 +115,11 @@ if uploaded is not None:
         cls  = CLASS_NAMES[idx]
         prob = float(preds[idx]) * 100
         icon = "🔴" if cls in DANGEROUS else "🟢"
-        st.progress(prob / 100, text=f"{icon} {cls.upper()} — {LABEL_MAP[cls]}  ({prob:.1f}%)")
+        st.progress(
+            prob / 100,
+            text=f"{icon} {cls.upper()} — {LABEL_MAP[cls]}  ({prob:.1f}%)"
+        )
 
-    st.subheader("What does this mean?")
     interpretations = {
         'akiec': "Actinic keratosis is a pre-cancerous lesion caused by UV exposure. Medical evaluation is recommended.",
         'bcc'  : "Basal cell carcinoma is the most common skin cancer. Highly treatable when caught early.",
@@ -131,8 +127,9 @@ if uploaded is not None:
         'df'   : "Dermatofibroma is a benign skin growth, usually harmless.",
         'mel'  : "Melanoma is the most serious form of skin cancer. URGENT: Please see a dermatologist immediately.",
         'nv'   : "Melanocytic nevi (moles) are common and usually harmless. Monitor for changes in size or colour.",
-        'vasc' : "Vascular lesion is typically benign. A doctor can confirm and advise on treatment if needed."
+        'vasc' : "Vascular lesion is typically benign. A doctor can confirm and advise if needed."
     }
+    st.subheader("What does this mean?")
     st.info(interpretations[top_class])
 
 else:
@@ -142,7 +139,7 @@ else:
     1. Click **Browse files** above  
     2. Upload a clear image of the skin lesion  
     3. The AI will classify it into one of 7 categories  
-    4. Review the confidence scores for all classes  
+    4. Review the confidence scores  
     """)
     st.markdown("### The 7 Skin Lesion Types")
     cols = st.columns(2)
