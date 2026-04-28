@@ -26,7 +26,7 @@ def download_model_if_needed():
         with st.spinner("Downloading model... please wait ~1 minute on first load."):
             import gdown
             url = f"https://drive.google.com/uc?id={GDRIVE_MODEL_ID}&export=download&confirm=t"
-            gdown.download(url, str(MODEL_PATH), quiet=False, fuzzy=True)
+            gdown.download(url, str(MODEL_PATH), quiet=False)
         st.success("Model downloaded! Loading now...")
 
 download_model_if_needed()
